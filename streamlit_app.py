@@ -16,19 +16,22 @@ def load_data():
 
     try:
         df = pd.read_csv(csv_url, skip_blank_lines=True)
-        df.columns = df.columns.str.strip()  # ✅ cleanup
-        
-        # If headers are misaligned, reset using first row
+
+        # Ensure proper header usage
         if df.columns[0] != "Strategy Name":
             df.columns = df.iloc[0]
             df = df[1:]
-            df.columns = df.columns.str.strip()  # ✅ cleanup again
 
+        # Clean up column names (strip spaces, normalize encoding)
+        df.columns = df.columns.astype(str).str.strip().str.encode('ascii', errors='ignore').str.decode()
+
+        st.write("🧾 Normalized Columns:", df.columns.tolist())
+
+        # Parse dates safely
         df["Start Date"] = pd.to_datetime(df["Start Date"], errors="coerce")
         df["Due Date"] = pd.to_datetime(df["Due Date"], errors="coerce")
 
-        st.write("✅ CSV loaded successfully!")
-        st.write("🧾 Final Columns:", df.columns.tolist())
+        st.write("✅ Dataframe loaded:")
         st.dataframe(df.head())
 
         return df
@@ -36,6 +39,7 @@ def load_data():
     except Exception as e:
         st.error(f"❌ Error loading CSV: {e}")
         return None
+
 
 # --- Load the data ---
 df = load_data()
