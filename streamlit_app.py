@@ -10,10 +10,19 @@ st.title("📊 Roadmap Timeline Viewer")
 def load_data():
     sheet_url = st.secrets["sheet_url"]
     csv_url = sheet_url.replace("/edit#gid=", "/export?format=csv&gid=")
-    df = pd.read_csv(csv_url)
-    df["Start Date"] = pd.to_datetime(df["Start Date"])
-    df["Due Date"] = pd.to_datetime(df["Due Date"])
-    return df
+    
+    st.write("📎 CSV URL being used:", csv_url)
+    
+    try:
+        df = pd.read_csv(csv_url)
+        st.write("✅ CSV loaded successfully!")
+        st.write("🧾 Columns found:", df.columns.tolist())
+        st.write("🔍 First few rows:")
+        st.dataframe(df.head())
+        return df
+    except Exception as e:
+        st.error(f"❌ Error loading CSV: {e}")
+        raise
 
 df = load_data()
 
