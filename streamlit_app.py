@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from urllib.parse import urlparse, parse_qs
 
 # --- Streamlit page setup ---
 st.set_page_config(page_title="Roadmap Timeline", layout="wide")
@@ -8,26 +9,31 @@ st.title("📊 Roadmap Timeline Viewer")
 
 @st.cache_data(ttl=300)
 def load_data():
-    sheet_url = st.secrets["sheet_url"]
-    csv_url   = sheet_url.replace("/edit#gid=", "/export?format=csv&gid=")
+    # 1. Read the raw sheet URL from secrets
+    sheet_url = st.secrets["sheet_url"].strip()
+    st.write("📎 Raw sheet URL:", sheet_url)
+
+    # 2. Strip off any fragment (#...) and parse out the sheet ID + gid
+    parsed = urlparse(sheet_url)
+    base_path = parsed.path  # e.g. "/spreadsheets/d/<ID>/edit"
+    sheet_id = base_path.split("/")[3]
+    gid = parse_qs(parsed.query).get("gid", ["0"])[0]
+
+    # 3. Build the proper CSV-export URL
+    csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
     st.write("📎 CSV URL being used:", csv_url)
 
     try:
-        # Skip the first line (filter dropdown row) and use the 2nd line as header
-        df = pd.read_csv(
-            csv_url,
-            header=1,
-            skip_blank_lines=True,
-            on_bad_lines="skip",
-        )
+        # 4. Fetch as CSV
+        df = pd.read_csv(csv_url, skip_blank_lines=True, on_bad_lines="skip", header=0)
 
-        # Clean up column names
+        # 5. Clean up column names
         df.columns = df.columns.astype(str).str.strip()
 
-        st.write("🧾 Real Columns (after skipping bogus first row):", df.columns.tolist())
+        st.write("🧾 Columns loaded:", df.columns.tolist())
         st.dataframe(df.head())
 
-        # Parse dates
+        # 6. Parse dates
         df["Start Date"] = pd.to_datetime(df["Start Date"], errors="coerce")
         df["Due Date"]   = pd.to_datetime(df["Due Date"],   errors="coerce")
 
@@ -37,10 +43,10 @@ def load_data():
         st.error(f"❌ Error loading CSV: {e}")
         return None
 
-# --- Load & validate ---
+# --- Load & validate the data ---
 df = load_data()
 if df is None or df.empty or "Strategy Name" not in df.columns:
-    st.error("🚨 Data load failed — please check your sheet.")
+    st.error("🚨 Data load failed — please check your sheet and column headers.")
     st.stop()
 
 # --- Sidebar filters ---
@@ -51,7 +57,7 @@ with st.sidebar:
     tribes     = st.multiselect("Tribe",     df["Tribe"].dropna().unique())
     squads     = st.multiselect("Squad",     df["Squad"].dropna().unique())
     status     = st.multiselect("Status",    df["Status"].dropna().unique())
-    stages     = st.multiselect("Stage",     df["Milestone Stage"].dropna().unique())
+    stages     = st.multiselect("Milestone Stage", df["Milestone Stage"].dropna().unique())
 
 # --- Apply filters ---
 if strategies: df = df[df["Strategy Name"].isin(strategies)]
