@@ -10,21 +10,29 @@ st.title("📊 Roadmap Timeline Viewer")
 def load_data():
     sheet_url = st.secrets["sheet_url"]
     csv_url = sheet_url.replace("/edit#gid=", "/export?format=csv&gid=")
-    
+
     st.write("📎 CSV URL being used:", csv_url)
-    
+
     try:
-        df = pd.read_csv(csv_url)
+        df = pd.read_csv(csv_url, skip_blank_lines=True)
+        # Try setting header explicitly
+        if df.columns[0] != "Strategy Name":
+            df.columns = df.iloc[0]
+            df = df[1:]
+
+        df["Start Date"] = pd.to_datetime(df["Start Date"], errors="coerce")
+        df["Due Date"] = pd.to_datetime(df["Due Date"], errors="coerce")
+
         st.write("✅ CSV loaded successfully!")
         st.write("🧾 Columns found:", df.columns.tolist())
         st.write("🔍 First few rows:")
         st.dataframe(df.head())
         return df
+
     except Exception as e:
         st.error(f"❌ Error loading CSV: {e}")
         raise
 
-df = load_data()
 
 # --- Filters ---
 strategies = st.multiselect("Filter by Strategy", df["Strategy Name"].unique())
