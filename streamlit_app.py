@@ -15,7 +15,9 @@ def load_data():
     st.write("📎 CSV URL being used:", csv_url)
 
     try:
-        df = pd.read_csv(csv_url, skip_blank_lines=True)
+        
+        df = pd.read_csv(csv_url, skip_blank_lines=True, on_bad_lines='skip')
+
 
         # Ensure proper header usage
         if df.columns[0] != "Strategy Name":
