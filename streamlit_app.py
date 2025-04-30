@@ -16,11 +16,13 @@ def load_data():
 
     try:
         df = pd.read_csv(csv_url, skip_blank_lines=True)
-
+        df.columns = df.columns.str.strip()  # ✅ cleanup
+        
         # If headers are misaligned, reset using first row
         if df.columns[0] != "Strategy Name":
             df.columns = df.iloc[0]
             df = df[1:]
+            df.columns = df.columns.str.strip()  # ✅ cleanup again
 
         df["Start Date"] = pd.to_datetime(df["Start Date"], errors="coerce")
         df["Due Date"] = pd.to_datetime(df["Due Date"], errors="coerce")
