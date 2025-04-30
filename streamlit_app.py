@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
+# --- Streamlit page setup ---
 st.set_page_config(page_title="Roadmap Timeline", layout="wide")
 st.title("📊 Roadmap Timeline Viewer")
 
@@ -15,7 +16,8 @@ def load_data():
 
     try:
         df = pd.read_csv(csv_url, skip_blank_lines=True)
-        # Try setting header explicitly
+
+        # If headers are misaligned, reset using first row
         if df.columns[0] != "Strategy Name":
             df.columns = df.iloc[0]
             df = df[1:]
@@ -24,33 +26,57 @@ def load_data():
         df["Due Date"] = pd.to_datetime(df["Due Date"], errors="coerce")
 
         st.write("✅ CSV loaded successfully!")
-        st.write("🧾 Columns found:", df.columns.tolist())
-        st.write("🔍 First few rows:")
+        st.write("🧾 Final Columns:", df.columns.tolist())
         st.dataframe(df.head())
+
         return df
 
     except Exception as e:
         st.error(f"❌ Error loading CSV: {e}")
-        raise
+        return None
 
+# --- Load the data ---
+df = load_data()
+
+# --- Defensive check to avoid crashing if data failed to load ---
+if df is None or df.empty or "Strategy Name" not in df.columns:
+    st.error("🚨 Data could not be loaded properly. Please check your sheet and column headers.")
+    st.stop()
 
 # --- Filters ---
-strategies = st.multiselect("Filter by Strategy", df["Strategy Name"].unique())
-priority = st.multiselect("Filter by Priority", df["Project Priority"].dropna().unique())
+with st.sidebar:
+    st.subheader("🔍 Filters")
+    strategies = st.multiselect("Strategy", df["Strategy Name"].dropna().unique())
+    priorities = st.multiselect("Priority", df["Project Priority"].dropna().unique())
+    tribes = st.multiselect("Tribe", df["Tribe"].dropna().unique())
+    squads = st.multiselect("Squad", df["Squad"].dropna().unique())
+    status = st.multiselect("Status", df["Status"].dropna().unique())
+    stages = st.multiselect("Milestone Stage", df["Milestone Stage"].dropna().unique())
+
+# --- Apply filters ---
 if strategies:
     df = df[df["Strategy Name"].isin(strategies)]
-if priority:
-    df = df[df["Project Priority"].isin(priority)]
+if priorities:
+    df = df[df["Project Priority"].isin(priorities)]
+if tribes:
+    df = df[df["Tribe"].isin(tribes)]
+if squads:
+    df = df[df["Squad"].isin(squads)]
+if status:
+    df = df[df["Status"].isin(status)]
+if stages:
+    df = df[df["Milestone Stage"].isin(stages)]
 
-# --- Timeline Chart ---
+# --- Timeline chart ---
 fig = px.timeline(
     df,
     x_start="Start Date",
     x_end="Due Date",
     y="Milestone",
     color="Status",
-    hover_data=["Project Name", "Tribe", "Squad", "KRs", "Milestone Stage", "Comments"]
+    hover_data=["Strategy Name", "Project Name", "Tribe", "Squad", "KRs", "Milestone Stage", "Comments"]
 )
-fig.update_yaxes(autorange="reversed")  # Gantt style
-fig.update_layout(title="Timeline View", height=600)
+
+fig.update_yaxes(autorange="reversed")
+fig.update_layout(title="🗓️ Milestone Timeline", height=600)
 st.plotly_chart(fig, use_container_width=True)
