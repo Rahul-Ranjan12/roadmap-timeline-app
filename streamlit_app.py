@@ -25,7 +25,8 @@ def load_data():
             df = df[1:]
 
         # Clean up column names (strip spaces, normalize encoding)
-        df.columns = df.columns.astype(str).str.strip().str.encode('ascii', errors='ignore').str.decode()
+        df.columns = [col.encode('ascii', errors='ignore').decode('utf-8').strip() for col in df.columns.astype(str)]
+
 
         st.write("🧾 Normalized Columns:", df.columns.tolist())
 
